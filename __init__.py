@@ -31,12 +31,14 @@ def create_app(test_config=None):
     from beanbot.db import init_app
     init_app(app)
 
-    @app.route('/userstats/<crsid>',defaults={'begin':'2023-01-01T00-00-00'})
-    @app.route('/userstats/<crsid>/<begin>')
+    @app.route('/api/userstats/<crsid>',
+               defaults={'begin': '2023-01-01T00-00-00'})
+    @app.route('/api/userstats/<crsid>/<begin>')
     def user_stats(crsid, begin):
         # humantime to unix time
-        # note: assumes begin is in UTC 
-        # actually fine, we are in the UK haha 
+        # note: assumes begin is in UTC
+        # actually fine, we are in the UK haha
+        # \pm 1 because of daylight savings...
         g.db.open_db()
         begin_posix = dt.strptime(begin,"%Y-%m-%dT%H-%M-%S").strftime('%s')
         total_shots = g.db.execute(
@@ -45,14 +47,13 @@ def create_app(test_config=None):
         totals = g.db.execute(
                 "SELECT type,count(ts) FROM transactions WHERE crsid=? AND ts > ? GROUP BY type",
                 (crsid, begin_posix)).fetchall()
-        return {            
+        return {
                 "total_shots": total_shots,
-                "totals": { r[0] : r[1] for r in totals }
+                "totals": {r[0]: r[1] for r in totals}
                 }
-    
-    
-    @app.route('/timeseries', defaults={'crsid':None})
-    @app.route('/timeseries/<crsid>')
+
+    @app.route('/api/timeseries', defaults={'crsid': None})
+    @app.route('/api/timeseries/<crsid>')
     def get_timeseries(crsid):
         g.db.open_db()
         hdr = ["timestamp", "type"]
@@ -67,8 +68,8 @@ def create_app(test_config=None):
                 "headers": hdr,
                 "table": r.fetchall()
                 }
-    
-    @app.route('/existsuser/<crsid>')
+
+    @app.route('/api/existsuser/<crsid>')
     def exists_user(crsid):
         # check if user exists at all
         g.db.open_db()
@@ -77,9 +78,9 @@ def create_app(test_config=None):
         found_id, rfid = r1.fetchone()
         if found_id != 0:
             return {"user-exists": True, "rfid": rfid}
-        
+
         return {"user-exists": False}
-    
+
 #    @app.route('/newuser/<crsid>', methods=['POST'])
 #    @auth.login_required
 #    def create_user(crsid):
@@ -88,7 +89,6 @@ def create_app(test_config=None):
 #        if 'debt' not in request.args:
 #            return {"reason": "Malformed query: debt is mandartory"}, 400
 #        debt = request.args['debt']
-#    
 #        db.open_db()
 #        try:
 #            res = {
@@ -109,6 +109,5 @@ def create_app(test_config=None):
 #            return {"reason": f"User {crsid} already exists"}, 400
 #                    
 #        # this is a really, really bad idea...
-    
-    return app    
 
+    return app
