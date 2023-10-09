@@ -51,8 +51,8 @@ def create_app(test_config=None):
                 }
     
     
-    @app.route('/timeseries', defaults={'crsid':None})
-    @app.route('/timeseries/<crsid>')
+    @app.route('/api/timeseries', defaults={'crsid':None})
+    @app.route('/api/timeseries/<crsid>')
     def get_timeseries(crsid):
         g.db.open_db()
         hdr = ["timestamp", "type"]

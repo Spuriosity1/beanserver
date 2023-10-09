@@ -1,6 +1,3 @@
-const datauri = "/data/transactions.csv";
-
-
 async function get_csv_data(url) {
   const res = await fetch(url);
 
@@ -21,14 +18,24 @@ async function get_csv_data(url) {
 } 
 
 
+const mainplot = document.getElementById('main-plot');
 
-
-function init() {
-	const mainplot = document.getElementById('main-plot');
-	const rowdata = get_csv_data(datauri);
-	
+async function make_plot(times) {
 	const layout = {'margin': {t:0}};
-	Plotly.newPlot(mainplot, rowdata, layout)
+
+	Plotly.newPlot(mainplot, [times], layout)
+
+}
+
+
+
+
+async function init() {
+	const timeseries = await fetch("api/timeseries");
+
+	const idx = timeseries["headers"].findIndex("timestamp");
+
+	await make_plot(timeseries["table"].map( (row) => { row[idx] }));
 
 }
 
