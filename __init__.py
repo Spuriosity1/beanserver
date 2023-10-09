@@ -39,7 +39,7 @@ def create_app(test_config=None):
         # note: assumes begin is in UTC
         # actually fine, we are in the UK haha
         # \pm 1 because of daylight savings...
-        g.db.open_db()
+        db.open_db()
         begin_posix = dt.strptime(begin,"%Y-%m-%dT%H-%M-%S").strftime('%s')
         total_shots = g.db.execute(
                 "SELECT sum(ncoffee) FROM transactions WHERE crsid=? AND ts > ?",
@@ -53,18 +53,38 @@ def create_app(test_config=None):
                 }
 
 
-    @app.route('/api/timeseries', defaults={'crsid': None})
-    @app.route('/api/timeseries/<crsid>')
-    def get_timeseries(crsid):
-        g.db.open_db()
-        hdr = ["timestamp", "type"]
-        if crsid is None:
-            r = g.db.execute(
-                "SELECT ts, type, crsid FROM transactions")
-            hdr += ['crsid']
-        else:
-            r = g.db.execute(
-                    "SELECT ts, type FROM transactions WHERE crsid=?", (crsid,))
+    @app.route('/api/timeseries')
+    def get_timeseries():
+        db.open_db()
+        hdr = ["ts", "type", "crsid"] 
+        
+        crsid = request.args.get('crsid')
+        after = request.args.get('after')
+        before = request.args.get('before')
+
+        conds = []
+
+        if crsid is not None:
+            hdr.remove('crsid')
+            conds += [("crsid=?", crsid)]
+
+        if after is not None:
+            after = dt.strptime(after,"%Y-%m-%dT%H-%M-%S").strftime('%s')
+            conds += [('ts >= ?', after)]
+
+        if before is not None:
+            before = dt.strptime(before,"%Y-%m-%dT%H-%M-%S").strftime('%s')
+            conds += [('ts <= ?', before)]
+
+        
+        q = "SELECT " + ", ".join(hdr) + " FROM transactions"
+        if len(conds) > 0:
+            q += " WHERE " + " AND ".join([x[0] for x in conds])
+        print(q)
+        r = g.db.execute(q,(x[1] for x in conds) )
+
+        data = r.fetchall()
+
         return { 
                 "headers": hdr,
                 "table": r.fetchall()
@@ -73,7 +93,7 @@ def create_app(test_config=None):
     @app.route('/api/existsuser/<crsid>')
     def exists_user(crsid):
         # check if user exists at all
-        g.db.open_db()
+        db.open_db()
         r1 = g.db.execute(
                 "SELECT count(crsid), rfid FROM users WHERE crsid=?", (crsid,))
         found_id, rfid = r1.fetchone()

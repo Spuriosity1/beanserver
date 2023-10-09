@@ -20,7 +20,7 @@ async function get_csv_data(url) {
 
 const mainplot = document.getElementById('main-plot');
 
-async function make_plot(times) {
+function make_plot(times) {
 	const layout = {'margin': {t:0}};
 
 	Plotly.newPlot(mainplot, [times], layout)
@@ -31,11 +31,15 @@ async function make_plot(times) {
 
 
 async function init() {
-	const timeseries = await fetch("api/timeseries");
 
-	const idx = timeseries["headers"].findIndex("timestamp");
+	const res = await fetch("/api/timeseries");
+	const jr = await res.json();	
+	const idx = await jr["headers"].indexOf("timestamp");
 
-	await make_plot(timeseries["table"].map( (row) => { row[idx] }));
+	await make_plot( {
+		'x': jr["table"].map( (row) =>  row[idx]),
+		'type': 'histogram'
+	});
 
 }
 
