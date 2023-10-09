@@ -1,44 +1,43 @@
 from flask import Flask, g, request, current_app
 import json
-import sqlite3
 import os
 from datetime import datetime as dt
 app = Flask(__name__)
+
 
 # The factory function
 def create_app(test_config=None):
 
     app = Flask(__name__, instance_relative_config=True)
 
-
-    if test_config is None:
-        # load the instance config when not testing
-        app.config.from_file("config.json", load=json.load)
-    else:
-        app.config.from_mapping(
+    # Defaults to be overridden
+    app.config.from_mapping(
             PRIMARYDB=os.path.join(app.instance_path, 'testDB1.sqlite'),
             SECONDARYDB=os.path.join(app.instance_path, 'testDB2.sqlite')
             )
+
+    if test_config is None:
+        app.config.from_file("config.json", load=json.load)
 
     # ensure the instance folder exists
     try:
         os.makedirs(app.instance_path)
     except OSError:
         pass
-    
+
     from beanbot import auth
     app.register_blueprint(auth.bp)
 
     from beanbot.db import init_app
     init_app(app)
-    
+
     @app.route('/userstats/<crsid>',defaults={'begin':'2023-01-01T00-00-00'})
     @app.route('/userstats/<crsid>/<begin>')
     def user_stats(crsid, begin):
         # humantime to unix time
         # note: assumes begin is in UTC 
         # actually fine, we are in the UK haha 
-        db.open_db()
+        g.db.open_db()
         begin_posix = dt.strptime(begin,"%Y-%m-%dT%H-%M-%S").strftime('%s')
         total_shots = g.db.execute(
                 "SELECT sum(ncoffee) FROM transactions WHERE crsid=? AND ts > ?",
@@ -55,7 +54,7 @@ def create_app(test_config=None):
     @app.route('/timeseries', defaults={'crsid':None})
     @app.route('/timeseries/<crsid>')
     def get_timeseries(crsid):
-        db.open_db()
+        g.db.open_db()
         hdr = ["timestamp", "type"]
         if crsid is None:
             r = g.db.execute(
@@ -72,11 +71,12 @@ def create_app(test_config=None):
     @app.route('/existsuser/<crsid>')
     def exists_user(crsid):
         # check if user exists at all
-        db.open_db()
+        g.db.open_db()
         r1 = g.db.execute(
-                "SELECT count(crsid) FROM users WHERE crsid=?", (crsid,))
-        if r1.fetchone() != (0,):
-            return {"user-exists": True }
+                "SELECT count(crsid), rfid FROM users WHERE crsid=?", (crsid,))
+        found_id, rfid = r1.fetchone()
+        if found_id != 0:
+            return {"user-exists": True, "rfid": rfid}
         
         return {"user-exists": False}
     
