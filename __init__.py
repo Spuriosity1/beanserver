@@ -2,7 +2,7 @@ from flask import Flask, g, request, current_app
 import json
 import os
 from datetime import datetime as dt
-app = Flask(__name__)
+# app = Flask(__name__)
 
 
 # The factory function
@@ -10,11 +10,15 @@ def create_app(test_config=None):
 
     app = Flask(__name__, instance_relative_config=True)
 
+    @app.route('/ping', methods=['GET', 'POST'])
+    def ping():
+        return "Pong!"
+
     # Defaults to be overridden
-    app.config.from_mapping(
-            PRIMARYDB=os.path.join(app.instance_path, 'testDB1.sqlite'),
-            SECONDARYDB=os.path.join(app.instance_path, 'testDB2.sqlite')
-            )
+#    app.config.from_mapping(
+#            PRIMARYDB=os.path.join(app.instance_path, 'testDB1.sqlite'),
+#            SECONDARYDB=os.path.join(app.instance_path, 'testDB2.sqlite')
+#            )
 
     if test_config is None:
         app.config.from_file("config.json", load=json.load)
@@ -30,6 +34,10 @@ def create_app(test_config=None):
 
     from beanbot.db import init_app
     init_app(app)
+
+    @app.route('/')
+    def index():
+        return app.send_static_file("index.html")
 
     @app.route('/userstats/<crsid>',defaults={'begin':'2023-01-01T00-00-00'})
     @app.route('/userstats/<crsid>/<begin>')
@@ -83,25 +91,8 @@ def create_app(test_config=None):
         r = g.db.execute(q,(x[1] for x in conds) )
 
         data = r.fetchall()
+   
 
-    
-    
-    @app.route('/timeseries', defaults={'crsid':None})
-    @app.route('/timeseries/<crsid>')
-    def get_timeseries(crsid):
-        g.db.open_db()
-        hdr = ["timestamp", "type"]
-        if crsid is None:
-            r = g.db.execute(
-                "SELECT ts, type, crsid FROM transactions")
-            hdr += ['crsid']
-        else:
-            r = g.db.execute(
-                    "SELECT ts, type FROM transactions WHERE crsid=?", (crsid,))
-        return { 
-                "headers": hdr,
-                "table": r.fetchall()
-                }
     
     @app.route('/existsuser/<crsid>')
     def exists_user(crsid):
