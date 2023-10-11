@@ -63,7 +63,6 @@ def create_app(test_config=None):
     def get_timeseries():
         db.open_db()
         hdr = ["DATETIME(ts,'unixepoch')", "type", "crsid"]
-
         crsid = request.args.get('crsid')
         after = request.args.get('after')
         before = request.args.get('before')
@@ -95,9 +94,7 @@ def create_app(test_config=None):
                 "headers": hdr,
                 "table": data
                 }
-   
 
-    
     @app.route('/existsuser/<crsid>')
     def exists_user(crsid):
         # check if user exists at all
