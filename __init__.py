@@ -59,12 +59,11 @@ def create_app(test_config=None):
                 "totals": { r[0] : r[1] for r in totals }
                 }
 
-
     @app.route('/api/timeseries')
     def get_timeseries():
         db.open_db()
-        hdr = ["ts", "type", "crsid"] 
-        
+        hdr = ["DATETIME(ts,'unixepoch')", "type", "crsid"]
+
         crsid = request.args.get('crsid')
         after = request.args.get('after')
         before = request.args.get('before')
@@ -76,21 +75,26 @@ def create_app(test_config=None):
             conds += [("crsid=?", crsid)]
 
         if after is not None:
-            after = dt.strptime(after,"%Y-%m-%dT%H-%M-%S").strftime('%s')
+            after = dt.strptime(after, "%Y-%m-%dT%H-%M-%S").strftime('%s')
             conds += [('ts >= ?', after)]
 
         if before is not None:
-            before = dt.strptime(before,"%Y-%m-%dT%H-%M-%S").strftime('%s')
+            before = dt.strptime(before, "%Y-%m-%dT%H-%M-%S").strftime('%s')
             conds += [('ts <= ?', before)]
-
-        
+ 
         q = "SELECT " + ", ".join(hdr) + " FROM transactions"
         if len(conds) > 0:
             q += " WHERE " + " AND ".join([x[0] for x in conds])
         print(q)
-        r = g.db.execute(q,(x[1] for x in conds) )
+        r = g.db.execute(q, tuple([x[1] for x in conds]))
 
         data = r.fetchall()
+        hdr[0] = 'timestamp'
+
+        return {
+                "headers": hdr,
+                "table": data
+                }
    
 
     
