@@ -20,13 +20,84 @@ async function get_csv_data(url) {
 
 const mainplot = document.getElementById('main-plot');
 
-function make_plot(times) {
-	const layout = {'margin': {t:0}};
+async function make_plot(data) {
+	const layout = {
+    'margin': {t:0},
+    'barmode': 'stack'
+  };
 
-	Plotly.newPlot(mainplot, [times], layout)
+
+  cappdata = {
+    'x': [],
+    'users': [],
+    'name': 'Cappuccino',
+    'type': 'histogram'
+  }
+
+  amerdata = {
+    'x': [],
+    'users': [],
+    'name': 'Americano',
+    'type': 'histogram'
+  }
+
+  esprdata = {
+    'x': [],
+    'users': [],
+    'name': 'Espresso',
+    'type': 'histogram'
+  }
+
+  teadata = {
+    'x': [],
+    'users': [],
+    'name': 'Tea',
+    'type': 'histogram'
+  }
+
+  
+  beantypes = {
+    "cappuccino": cappdata,
+    "cappuccino2": cappdata,
+    "americano": amerdata,
+    "americano2": amerdata,
+    "espresso": esprdata,
+    "espresso2": esprdata,
+    "tea": teadata
+  }
+
+  const typeID = await data["headers"].indexOf("type");
+  const timeID = await data["headers"].indexOf("timestamp");
+  const userID = await data["headers"].indexOf("crsid");
+
+  (await data["table"]).forEach( row => {   
+    beantypes[row[typeID]].x.push(row[timeID]);
+    beantypes[row[typeID]].users.push(row[userID]);
+  });
+  
+
+  const dataset = [esprdata,cappdata,amerdata,teadata];
+
+	Plotly.newPlot(mainplot, dataset, layout);
+
+  // register event handlers
+  //
+  
+  mainplot.on('plotly_click',  (clickdata) => {
+    const dd = clickdata['points'][0];
+    const data = dataset[ dd['curveNumber'] ];
+    count = {};
+    dd['pointIndices'].forEach( I => {
+      let ca = count[ data['users'][I] ];
+      ca = (ca === undefined) ? 1 : ca +1;
+      count[ data['users'][I] ] = ca;
+    }); 
+    console.log(count);
+  });
+
+
 
 }
-
 
 
 
@@ -34,13 +105,8 @@ async function init() {
 
 	const res = await fetch("/api/timeseries");
 	const jr = await res.json();	
-	const idx = await jr["headers"].indexOf("timestamp");
 
-	await make_plot( {
-		'x': jr["table"].map( (row) =>  row[idx]),
-		'type': 'histogram'
-	});
-
+  await make_plot( jr );
 }
 
 
