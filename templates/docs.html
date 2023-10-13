@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+
+{% block content %}
+
+<div class="header">
+  <h1>{% block title %} Docs {% endblock %}</h1>
+</div>
+<div class="content">
+  <h2>Web API</h2>
+  <code>/api/existsuser/&lt;crsid&gt;</code>
+  <h3>Arguments:</h3>
+  <table class="pure-table">
+    <tr>
+      <td><code>crsid</code></td>
+      <td>crsid of the user you wish to query.</td>
+    </tr>
+  </table>
+  <h3>Returns:</h3>  
+  <code>
+    {<br>
+    rfid:	[UID of RFID card, as and integer],<br>
+    user-exists: [boolean] <br>
+    }
+  </code>
+</div>
+{% endblock %}
+
