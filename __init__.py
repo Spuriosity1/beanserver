@@ -1,4 +1,4 @@
-from flask import Flask, g, request, current_app
+from flask import Flask, g, request, current_app, render_template
 import json
 import os
 from datetime import datetime as dt
@@ -29,34 +29,72 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    from beanbot import auth
-    app.register_blueprint(auth.bp)
+#    from beanbot import auth
+#    app.register_blueprint(auth.bp)
 
     from beanbot.db import init_app
     init_app(app)
 
-    @app.route('/')
-    def index():
-        return app.send_static_file("index.html")
+    @app.route('/favicon.ico')
+    def faviconIt():
+        return app.serve_static('favicon.ico')
 
-    @app.route('/userstats/<crsid>',defaults={'begin':'2023-01-01T00-00-00'})
-    @app.route('/userstats/<crsid>/<begin>')
-    def user_stats(crsid, begin):
-        # humantime to unix time
-        # note: assumes begin is in UTC
-        # actually fine, we are in the UK haha
-        # \pm 1 because of daylight savings...
+    @app.route('/')
+    @app.route('/index')
+    def index():
+        return render_template("index.html")
+
+
+    @app.route('/docs')
+    def docs():
+        return render_template("docs.html")
+
+    #@app.route('/api/userstats/')
+    #def user_all_stats():
+    #    db.open_db()
+    #    total_shots = g.db.execute(
+    #            "SELECT crsid, sum(ncoffee) FROM transactions GROUP BY crsid").fetchall()
+    #    res = {}
+    #    for row in total_shots:
+    #        res[row[0]] = {
+    #                "total_shots": row[1],
+    #                "totals": g.db.execute(
+    #            "SELECT type, count(ts) FROM transactions \
+    #                    WHERE crsid=? GROUP BY type",(row[0],)).fetchall()
+    #                }
+    #    return res
+
+    @app.route('/api/leaderboard',
+               defaults={'begin': '2023-01-01T00-00-00'})
+    @app.route('/api/leaderboard/<begin>')
+    def get_leaderboard(begin):
         db.open_db()
-        begin_posix = dt.strptime(begin,"%Y-%m-%dT%H-%M-%S").strftime('%s')
+        begin_posix = dt.strptime(begin, "%Y-%m-%dT%H-%M-%S").strftime('%s')
         total_shots = g.db.execute(
-                "SELECT sum(ncoffee) FROM transactions WHERE crsid=? AND ts > ?",
+                "SELECT sum(ncoffee), crsid FROM transactions \
+                        WHERE ts > ? \
+                        GROUP BY crsid \
+                        ORDER BY -sum(ncoffee)", (begin_posix,)).fetchall()
+        return [{"crsid": r[1], "shots": r[0]} for r in total_shots]
+
+
+
+    @app.route('/api/userstats/<crsid>', defaults={'begin': '2023-01-01T00-00-00'})
+    @app.route('/api/userstats/<crsid>/<begin>')
+    def user_stats(crsid, begin):
+        db.open_db()
+        begin_posix = dt.strptime(begin, "%Y-%m-%dT%H-%M-%S").strftime('%s')
+        total_shots = g.db.execute(
+                "SELECT sum(ncoffee) FROM transactions \
+                        WHERE crsid=? AND ts > ?",
                 (crsid, begin_posix)).fetchone()
         totals = g.db.execute(
-                "SELECT type,count(ts) FROM transactions WHERE crsid=? AND ts > ? GROUP BY type",
+                "SELECT type,count(ts) FROM transactions \
+                        WHERE crsid=? AND ts > ? GROUP BY type",
                 (crsid, begin_posix)).fetchall()
-        return {            
+        return {
                 "total_shots": total_shots,
-                "totals": { r[0] : r[1] for r in totals }
+                "totals": {r[0]: r[1] for r in totals}
                 }
 
     @app.route('/api/timeseries')
@@ -80,7 +118,7 @@ def create_app(test_config=None):
         if before is not None:
             before = dt.strptime(before, "%Y-%m-%dT%H-%M-%S").strftime('%s')
             conds += [('ts <= ?', before)]
- 
+
         q = "SELECT " + ", ".join(hdr) + " FROM transactions"
         if len(conds) > 0:
             q += " WHERE " + " AND ".join([x[0] for x in conds])
@@ -95,7 +133,7 @@ def create_app(test_config=None):
                 "table": data
                 }
 
-    @app.route('/existsuser/<crsid>')
+    @app.route('/api/existsuser/<crsid>')
     def exists_user(crsid):
         # check if user exists at all
         db.open_db()
@@ -104,9 +142,9 @@ def create_app(test_config=None):
         found_id, rfid = r1.fetchone()
         if found_id != 0:
             return {"user-exists": True, "rfid": rfid}
-        
+
         return {"user-exists": False}
-    
+
 #    @app.route('/newuser/<crsid>', methods=['POST'])
 #    @auth.login_required
 #    def create_user(crsid):
@@ -115,7 +153,7 @@ def create_app(test_config=None):
 #        if 'debt' not in request.args:
 #            return {"reason": "Malformed query: debt is mandartory"}, 400
 #        debt = request.args['debt']
-#    
+
 #        db.open_db()
 #        try:
 #            res = {
@@ -134,8 +172,7 @@ def create_app(test_config=None):
 #            return res
 #        except sqlite3.IntegrityError as e:
 #            return {"reason": f"User {crsid} already exists"}, 400
-#                    
 #        # this is a really, really bad idea...
-    
-    return app    
+
+    return app
 

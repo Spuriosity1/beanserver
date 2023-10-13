@@ -1,8 +1,11 @@
 
+# Bean counting server for TCM
 
-- Cron job renders some plots for the TCM website
-- Another cron job makes a static CSV file that is read by a number of plotly clients (run at
-midnight daily to simplify binning)
+Rough development plan:
 
-
+# Analytics
+1. Weekly (?) leaderboard
+2. Adjustable binning for the consumption histogram?
+3. Formatting the leaderboard (well, everything) nicely
+4. ???
 
