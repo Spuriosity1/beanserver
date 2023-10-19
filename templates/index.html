@@ -1,32 +1,77 @@
 {% extends 'base.html' %}
 
-{% block javascript_include %}
-<!-- plotly -->
-<script type="text/javascript" src="/static/lib/plotly-2.24.1.min.js" charset="utf-8"></script>
-{% endblock %}
 
 {% block content %}
 
   <div class="header">
-    <h1>{% block title %} Statistics {% endblock %}</h1>
+    <h1>{% block title %} About {% endblock %}</h1>
   </div>
   <div class="content">
 
+    <h2>What is this box?</h2>
+    <p>
+    This is <i>beanbot</i>, an RFID-based system for keeping track of your coffee in a modern, over-engineered way. Note that this is essentially an electronic honesty box - <i>your card will not be modified by this system, and you will not be charged through college or otherwise.</i> Payment must still be made by bank transfer.
+    </p>
+    <h2>
+      How do I use it?
+    </h2>
+    <p>
+    <ol>
+      <li>Select the coffee you wish to mark on your record.</li>
+      <li>Tap your camcard.</li>
+      <li>That's it!</li>
+    </ol>
+    <h2>
+      Registration
+    </h2>
+    <p>
+    This box cannot read the contents of your RFID card. It is therefore necessary to associate your crsid with your card in a short registration step.
+    </p>
+    <p> If you tap an unregistered card, you will be presented with the following screen:</p>
     <div class="pure-g">
-      <div id="main-plot" class="hero-plot pure-u-1"></div>
+      <div class="pure-g-1" style="background-color:black;"><img class="pure-img-responsive" style="padding:10px;" src="/static/img/unrecognisedRFID.png"></div>
     </div>
+    <p>
+    Turn the knob to select 'Yes' from beneath, and click the knob to confirm. You will then see a page of CRSid's:
+    </p>
     <div class="pure-g">
-      <div id="leaderboard" class="pure-u-1-3"></div>
-      <div id="time-plot" class="hero-plot pure-u-2-3"></div>
+      <div class="pure-g-1" style="background-color:black"><img class="pure-img-responsive" style="padding:10px;" src="/static/img/selectCRSID.png"></div>
     </div>
+    <p>Simply turn the knob to select yours, and click to confirm.</p>
 
-    
+    <h3>If you make a mistake</h3>
+    <p>Email als217 to re-associate your card with the correct CRSid.</p>
+    <h3>If your CRSid is not shown</h3>
+    Scroll to the special value <code>OTHER</code>,
+
+    <div class="pure-g">
+      <div class="pure-g-1" style="background-color:black"><img class="pure-img-responsive" style="padding:10px;" src="/static/img/selectCRSID2.png"></div>
+    </div>
+    <p>and enter your crsid (or indeed any psuedonym you desire) by hand.</p>
+
+  <h2>Paying your balance</h2>
+  <p>There are two options:</p>
+  <ol>
+    <li>Pay Claudio Castelnovo in person (Mott 528)</li>
+    <li>Make a bank transfer to
+      <table>
+        <tr><td>Claudio Castelnovo
+      <tr><td>Account: 22926690
+          <tr><td>Sort Code: 04 00 75
+      </table>
+    </li>
+    <b>and</b> email Claudio so that he can keep a record of payments.
+  </ol>
+  <p>After you have done this, let the coffee accountant know that you have paid.</p>
+
+  <h2>FAQ</h2>
+  <h3>Will this break my camcard?</h3>
+  <p>As far as I can tell, no. (I've used it well over 100 times, with no issues so far.)</p>
+  <h3>Do I have to use my camcard?</h3>
+  <p>Basically any 125kHz RFID card will work with this system.</p> Such cards can be provided for you if you would prefer not to use your camcard.
+  <h3>Do I have to use my real crsid?</h3>
+  <p>Strictly speaking, no - however, it makes life harder for the accountants.</p>
+
   </div>
 {% endblock %}
 
-{% block javascript %}
-
-<script type="text/javascript" src="/static/js/ui.js"></script>
-<script type="text/javascript" src="/static/js/plot.js"></script>
-
-{% endblock %}

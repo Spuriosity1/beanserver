@@ -1,7 +1,6 @@
 from flask import Flask, g, request, current_app, render_template
 import json
 import os
-from datetime import datetime as dt
 # app = Flask(__name__)
 
 
@@ -29,6 +28,9 @@ def create_app(test_config=None):
     except OSError:
         pass
 
+    from beanbot import api
+    app.register_blueprint(api.bp)
+
 #    from beanbot import auth
 #    app.register_blueprint(auth.bp)
 
@@ -44,108 +46,19 @@ def create_app(test_config=None):
     def index():
         return render_template("index.html")
 
+    @app.route('/stats')
+    def stats():
+        return render_template("stats.html")
 
     @app.route('/docs')
     def docs():
         return render_template("docs.html")
 
-    #@app.route('/api/userstats/')
-    #def user_all_stats():
-    #    db.open_db()
-    #    total_shots = g.db.execute(
-    #            "SELECT crsid, sum(ncoffee) FROM transactions GROUP BY crsid").fetchall()
-    #    res = {}
-    #    for row in total_shots:
-    #        res[row[0]] = {
-    #                "total_shots": row[1],
-    #                "totals": g.db.execute(
-    #            "SELECT type, count(ts) FROM transactions \
-    #                    WHERE crsid=? GROUP BY type",(row[0],)).fetchall()
-    #                }
-    #    return res
+    @app.route('/contact')
+    def contact():
+        return render_template("contact.html")
 
-    @app.route('/api/leaderboard',
-               defaults={'begin': '2023-01-01T00-00-00'})
-    @app.route('/api/leaderboard/<begin>')
-    def get_leaderboard(begin):
-        db.open_db()
-        begin_posix = dt.strptime(begin, "%Y-%m-%dT%H-%M-%S").strftime('%s')
-        total_shots = g.db.execute(
-                "SELECT sum(ncoffee), crsid FROM transactions \
-                        WHERE ts > ? \
-                        GROUP BY crsid \
-                        ORDER BY -sum(ncoffee)", (begin_posix,)).fetchall()
-        return [{"crsid": r[1], "shots": r[0]} for r in total_shots]
-
-
-
-    @app.route('/api/userstats/<crsid>', defaults={'begin': '2023-01-01T00-00-00'})
-    @app.route('/api/userstats/<crsid>/<begin>')
-    def user_stats(crsid, begin):
-        db.open_db()
-        begin_posix = dt.strptime(begin, "%Y-%m-%dT%H-%M-%S").strftime('%s')
-        total_shots = g.db.execute(
-                "SELECT sum(ncoffee) FROM transactions \
-                        WHERE crsid=? AND ts > ?",
-                (crsid, begin_posix)).fetchone()
-        totals = g.db.execute(
-                "SELECT type,count(ts) FROM transactions \
-                        WHERE crsid=? AND ts > ? GROUP BY type",
-                (crsid, begin_posix)).fetchall()
-        return {
-                "total_shots": total_shots,
-                "totals": {r[0]: r[1] for r in totals}
-                }
-
-    @app.route('/api/timeseries')
-    def get_timeseries():
-        db.open_db()
-        hdr = ["DATETIME(ts,'unixepoch')", "type", "crsid"]
-        crsid = request.args.get('crsid')
-        after = request.args.get('after')
-        before = request.args.get('before')
-
-        conds = []
-
-        if crsid is not None:
-            hdr.remove('crsid')
-            conds += [("crsid=?", crsid)]
-
-        if after is not None:
-            after = dt.strptime(after, "%Y-%m-%dT%H-%M-%S").strftime('%s')
-            conds += [('ts >= ?', after)]
-
-        if before is not None:
-            before = dt.strptime(before, "%Y-%m-%dT%H-%M-%S").strftime('%s')
-            conds += [('ts <= ?', before)]
-
-        q = "SELECT " + ", ".join(hdr) + " FROM transactions"
-        if len(conds) > 0:
-            q += " WHERE " + " AND ".join([x[0] for x in conds])
-        print(q)
-        r = g.db.execute(q, tuple([x[1] for x in conds]))
-
-        data = r.fetchall()
-        hdr[0] = 'timestamp'
-
-        return {
-                "headers": hdr,
-                "table": data
-                }
-
-    @app.route('/api/existsuser/<crsid>')
-    def exists_user(crsid):
-        # check if user exists at all
-        db.open_db()
-        r1 = g.db.execute(
-                "SELECT count(crsid), rfid FROM users WHERE crsid=?", (crsid,))
-        found_id, rfid = r1.fetchone()
-        if found_id != 0:
-            return {"user-exists": True, "rfid": rfid}
-
-        return {"user-exists": False}
-
-#    @app.route('/newuser/<crsid>', methods=['POST'])
+#    @bp.route('/newuser/<crsid>', methods=['POST'])
 #    @auth.login_required
 #    def create_user(crsid):
 #        if len(crsid) > 8:
