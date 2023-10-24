@@ -219,7 +219,7 @@ async function make_leaderboard(res){
 async function init() {
 
 	const res_leader = await fetch("/api/leaderboard");
-	const res_week = await fetch("/api/leaderboard/interval/1w");
+	const res_week = await fetch("/api/leaderboard/sinceday/6");
 	const res_ts = await fetch("/api/timeseries");
   leaderDivWeekly.innerHTML = await make_leaderboard( await res_week.json());
   leaderDiv.innerHTML = await make_leaderboard( await res_leader.json());

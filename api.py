@@ -7,6 +7,7 @@ from beanbot.db import open_db
 bp = Blueprint('api', __name__, url_prefix='/api')
 
 
+
 # @bp.route('/userstats/')
 # def user_all_stats():
 #     db.open_db()
@@ -41,6 +42,14 @@ def get_leaderboard_dt(begin_dt):
 def get_leaderboard(begin):
     begin_dt = dt.datetime.strptime(begin,"%Y-%m-%dT%H-%M-%S")
     return get_leaderboard_dt(begin_dt)
+
+@bp.route('/leaderboard/sinceday/<day>')
+def get_leaderboard_day(day):
+    today = dt.datetime.today()
+    dest = today - dt.timedelta(days=(today.weekday() - int(day) - 1) % 7 + 1)
+    dest.replace(hour=0, minute=0, second=1)
+    print(dest)
+    return get_leaderboard_dt(dest)
 
 # Expects spec to ve in the form "1w4d10y5h5m5s" or similar
 @bp.route('/leaderboard/interval/<spec>')
