@@ -47,9 +47,11 @@ def get_leaderboard(begin):
 def get_leaderboard_day(day):
     today = dt.datetime.today()
     dest = today - dt.timedelta(days=(today.weekday() - int(day) - 1) % 7 + 1)
-    dest.replace(hour=0, minute=0, second=1)
+    dest = dest.replace(hour=0, minute=0, second=1)
     print(dest)
-    return get_leaderboard_dt(dest)
+    payload = get_leaderboard_dt(dest)
+    payload['datesince'] = dest.strftime("%Y-%m-%d %H:%M:%S")
+    return payload
 
 # Expects spec to ve in the form "1w4d10y5h5m5s" or similar
 @bp.route('/leaderboard/interval/<spec>')

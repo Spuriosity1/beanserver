@@ -221,8 +221,13 @@ async function init() {
 	const res_leader = await fetch("/api/leaderboard");
 	const res_week = await fetch("/api/leaderboard/sinceday/6");
 	const res_ts = await fetch("/api/timeseries");
-  leaderDivWeekly.innerHTML = await make_leaderboard( await res_week.json());
+
+  let data_week = await res_week.json();
+  leaderDivWeekly.innerHTML = await make_leaderboard( data_week );
+  document.getElementById('weekly').setAttribute("title",
+    "Shots since " + data_week['datesince'])
   leaderDiv.innerHTML = await make_leaderboard( await res_leader.json());
+
 
   await make_plots( await res_ts.json())
   

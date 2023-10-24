@@ -259,6 +259,36 @@ h3.centred {
 }
 
 table.centred {
-     margin-left: auto;
+    margin-left: auto;
     margin-right: auto;
+}
+
+[data-tooltip]::before {
+    position : absolute;
+    content : attr(data-tooltip);
+    opacity : 0;
+     /* customizable */
+    transition: all 0.15s ease;
+    padding: 10px;
+    color: #111111;
+    border-radius: 2px;
+    box-shadow: 2px 2px 1px silver;
+}
+
+[data-tooltip]:hover::before {
+    opacity : 1;
+
+      /* customizable */
+    background: DodgerBlue;
+    margin-top: -50px;
+    margin-left: 20px;
+}
+
+
+[data-tooltip]:not([data-tooltip-persistent])::before {
+    pointer-events: none;
+}
+
+.tooltip-outer {
+    color:DodgerBlue;
 }
