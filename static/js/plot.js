@@ -23,6 +23,7 @@ async function get_csv_data(url) {
 const mainplot = document.getElementById('main-plot');
 const timehist = document.getElementById('time-plot');
 const leaderDiv = document.getElementById("leaderboard");
+const leaderDivWeekly = document.getElementById("weekly_leaderboard");
 
 
 const gli_anni = ["2023", "2024", "2025", "2026", "2027", "2028"];
@@ -80,7 +81,7 @@ async function make_plots(data) {
     //'margin': {t:0},
     barmode: 'stack',
     title: {
-      text: 'Daily total coffee consumption',
+      text: 'Daily Coffee Consumption',
       xref: 'paper',
       x: 0.05,
     },
@@ -99,18 +100,31 @@ async function make_plots(data) {
     yaxis: {
       autorange: true,
       type: 'linear'
+    },
+    showlegend: true,
+    legend: {
+      x: 1,
+      y: 1,
+      xanchor: 'right'
+    },
+    margin: {
+      l: 0,
+      r: 0
     }
   };
 
   const time_hist_layout = {
     title: {
-      text: 'Beverage Times',
+      text: 'Beverage Time',
       xref: 'paper',
       x: 0.05,
     },
     yaxis: {
       autorange: 'reversed',
       tickformat: '%H:%M:%S'
+    },
+    margin:{
+      b:0
     }
   };
 
@@ -150,10 +164,20 @@ async function make_plots(data) {
   
 
 	Plotly.newPlot(mainplot, traces, flavour_hist_layout);
-
 	Plotly.newPlot(timehist, [timedata], time_hist_layout);
+
   // register event handlers
   //
+
+  function resize_all() {
+    [mainplot, timehist].forEach( 
+      p=>{Plotly.relayout(p, {width: p.offsetWidth});
+    });
+
+  }
+  
+  window.addEventListener('resize', resize_all);
+  document.getElementById('menu').addEventListener('transitionend', resize_all);
   
 //    function adjust_histogram(start, end) {
 //      traces.forEach( d => {d.xbins = {'start': start, 'end': end, 'size': 1000*3600*24};});
@@ -173,27 +197,34 @@ async function make_plots(data) {
 
 }
 
-async function make_leaderboard(leader){
-  let s = '<table class="pure-table pure-table-horizontal">\
-    <thead><tr><th>crsid</th><th>Number of Shots</th></tr></thead>\
+async function make_leaderboard(res){
+
+  if (!res["success"] || res["data"] === undefined){
+    return "<p>Failed to fetch data.</p>";
+  }
+  
+  let s = '<table class="pure-table pure-table-horizontal centred">\
+    <thead><tr><th>crsid</th><th>Shots</th></tr></thead>\
     ';
   s += "<tbody>";
-  leader.slice(0,5).forEach( r => {
+  res["data"].slice(0,5).forEach( r => {
     s += "<tr><td>" + r["crsid"] + "</td><td>" + r["shots"] +"</td></tr>";
   });
   s += "</tbody></table>";
-  leaderDiv.innerHTML = s;
+  return s;
 }
+
 
 
 async function init() {
 
-	let res = await fetch("/api/leaderboard");
-  await make_leaderboard(await res.json());
+	const res_leader = await fetch("/api/leaderboard");
+	const res_week = await fetch("/api/leaderboard/interval/1w");
+	const res_ts = await fetch("/api/timeseries");
+  leaderDivWeekly.innerHTML = await make_leaderboard( await res_week.json());
+  leaderDiv.innerHTML = await make_leaderboard( await res_leader.json());
 
-	res = await fetch("/api/timeseries");
-  await make_plots(await res.json())
-
+  await make_plots( await res_ts.json())
   
 }
 

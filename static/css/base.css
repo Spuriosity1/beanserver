@@ -253,3 +253,12 @@ Hides the menu at `48em`, but modify this based on your app's needs.
 p.docs {
     text-indent: 3em;
 }
+
+h3.centred {
+    text-align: center;
+}
+
+table.centred {
+     margin-left: auto;
+    margin-right: auto;
+}

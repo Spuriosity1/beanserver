@@ -1,5 +1,6 @@
 from flask import Blueprint, g, request, render_template
-from datetime import datetime as dt
+import datetime as dt
+import re
 
 from beanbot.db import open_db
 
@@ -21,26 +22,68 @@ bp = Blueprint('api', __name__, url_prefix='/api')
 #                 }
 #     return res
 
-@bp.route('/leaderboard',
-           defaults={'begin': '2023-01-01T00-00-00'})
-@bp.route('/leaderboard/<begin>')
-def get_leaderboard(begin):
+def get_leaderboard_dt(begin_dt):
     db = open_db()
-    begin_posix = dt.strptime(begin, "%Y-%m-%dT%H-%M-%S").strftime('%s')
     total_shots = db.execute(
             "SELECT sum(ncoffee), crsid FROM transactions \
                     WHERE ts > ? \
                     GROUP BY crsid \
-                    ORDER BY -sum(ncoffee)", (begin_posix,)).fetchall()
-    return [{"crsid": r[1], "shots": r[0]} for r in total_shots]
+                    ORDER BY -sum(ncoffee)",
+            (begin_dt.strftime('%s'),)
+            ).fetchall()
+    data = [{"crsid": r[1], "shots": r[0]} for r in total_shots]
+    return {"success": True,
+            "data": data}
+
+@bp.route('/leaderboard/',
+          defaults={'begin': '2023-01-01T00-00-00'})
+@bp.route('/leaderboard/after/<begin>')
+def get_leaderboard(begin):
+    begin_dt = dt.datetime.strptime(begin,"%Y-%m-%dT%H-%M-%S")
+    return get_leaderboard_dt(begin_dt)
+
+# Expects spec to ve in the form "1w4d10y5h5m5s" or similar
+@bp.route('/leaderboard/interval/<spec>')
+def get_leaderboard_interval(spec):
+    spec = spec.replace(' ', '').lower()
+    specifiers = re.findall(r'\D+', spec)
+    quantifiers = re.findall(r'\d+', spec)
+
+    bad_retval = {"success": False, "bad_request": "malformed query"}
+    if len(specifiers) != len(quantifiers):
+        return bad_retval
+    timespec = {}
+    lmap = {
+            'd': 'days',
+            's': 'seconds',
+            'm': 'minutes',
+            'h': 'hours',
+            'w': 'weeks'
+            }
+    for s, q in zip(specifiers, quantifiers):
+        lhs = lmap.get(s)
+        if lhs is None:
+            return bad_retval
+        timespec[lhs] = int(q)
+
+    if len(lhs) == 0:
+        return bad_retval
+
+    d = dt.timedelta(**timespec)
+
+    tod = dt.datetime.now()
+    a = tod - d
+    print(a)
+    return get_leaderboard_dt(a)
 
 
 
-@bp.route('/userstats/<crsid>', defaults={'begin': '2023-01-01T00-00-00'})
-@bp.route('/userstats/<crsid>/<begin>')
+@bp.route('/userstats/<crsid>',
+          defaults={'begin': '2023-01-01T00-00-00'})
+@bp.route('/userstats/<crsid>/after/<begin>')
 def user_stats(crsid, begin):
     db = open_db()
-    begin_posix = dt.strptime(begin, "%Y-%m-%dT%H-%M-%S").strftime('%s')
+    begin_posix = dt.datetime.strptime(begin, "%Y-%m-%dT%H-%M-%S").strftime('%s')
     total_shots = db.execute(
             "SELECT sum(ncoffee) FROM transactions \
                     WHERE crsid=? AND ts > ?",
@@ -69,17 +112,16 @@ def get_timeseries():
         conds += [("crsid=?", crsid)]
 
     if after is not None:
-        after = dt.strptime(after, "%Y-%m-%dT%H-%M-%S").strftime('%s')
+        after = dt.datetime.strptime(after, "%Y-%m-%dT%H-%M-%S").strftime('%s')
         conds += [('ts >= ?', after)]
 
     if before is not None:
-        before = dt.strptime(before, "%Y-%m-%dT%H-%M-%S").strftime('%s')
+        before = dt.datetime.strptime(before, "%Y-%m-%dT%H-%M-%S").strftime('%s')
         conds += [('ts <= ?', before)]
 
     q = "SELECT " + ", ".join(hdr) + " FROM transactions"
     if len(conds) > 0:
         q += " WHERE " + " AND ".join([x[0] for x in conds])
-    print(q)
     r = g.db.execute(q, tuple([x[1] for x in conds]))
 
     data = r.fetchall()
