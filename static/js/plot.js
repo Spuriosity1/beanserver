@@ -4,8 +4,8 @@ async function get_csv_data(url) {
   const rows = [];
   let curr_row = '';
   for await (const chunk_bytes of res.body) {
-		chunk = String.fromCharCode(...chunk_bytes);
-		for (c of chunk){
+    chunk = String.fromCharCode(...chunk_bytes);
+    for (c of chunk){
       if (c === '\n' && curr_row.length > 0) {
         rows.push(curr_row.split('\t'));
         curr_row = '';
@@ -30,7 +30,7 @@ const gli_anni = ["2023", "2024", "2025", "2026", "2027", "2028"];
 
 const cbg_term_dates = {
   "Michaelmas Full Term Begins": ['2023-10-03', '2024-10-08', '2025-10-07', '2026-10-08'],
-  "Michaelmas FUll Term Ends":   ['2023-12-01', '2024-12-06', '2025-12-05', '2026-12-04'],
+  "Michaelmas Full Term Ends":   ['2023-12-01', '2024-12-06', '2025-12-05', '2026-12-04'],
   "Lent Full Term Begins":       ['2024-01-16', '2025-01-21', '2026-01-20', '2027-01-19'],
   "Lent Full Term Ends":         ['2024-03-15', '2025-03-21', '2026-03-20', '2027-03-19'],
   "Easter Full Term Begins":     ['2024-04-23', '2025-04-29', '2026-04-28', '2027-04-27'],
@@ -45,7 +45,15 @@ const cbg_term_dates = {
 
 
 async function make_plots(data) {
-  const default_dates = ['2023-10-03', '2024-01-16'];
+  const now = new Date();
+  now.setHours(now.getHours()+24);
+  const then = new Date(now);
+  then.setMonth(now.getMonth() -6);
+
+  const nows = now.toISOString().slice(0,10);
+  const thens = then.toISOString().slice(0,10);
+        
+  const default_dates = [thens, nows];
   const minorticks = [];
   const ticklabels = [];
 
@@ -77,7 +85,7 @@ async function make_plots(data) {
         {step: 'all'}
       ]};
 
-	const flavour_hist_layout = {
+  const flavour_hist_layout = {
     //'margin': {t:0},
     barmode: 'stack',
     title: {
@@ -86,7 +94,7 @@ async function make_plots(data) {
       x: 0.05,
     },
     xaxis: {
-      autorange: true,
+      autorange: false,
       range: default_dates,
       rangeselector: selectorOptions,
       rangeslider: {},
@@ -103,9 +111,9 @@ async function make_plots(data) {
     },
     showlegend: true,
     legend: {
-      x: 1,
+      x: 0,
       y: 1,
-      xanchor: 'right'
+      xanchor: 'left'
     },
     margin: {
       l: 0,
@@ -114,18 +122,26 @@ async function make_plots(data) {
   };
 
   const time_hist_layout = {
-    title: {
-      text: 'Beverage Time',
-      xref: 'paper',
-      x: 0.05,
-    },
+    //title: {
+    //  text: 'Beverage Time',
+    //  xref: 'paper',
+    //  x: 0.05,
+    //},
     yaxis: {
       autorange: 'reversed',
-      tickformat: '%H:%M:%S'
+      tickformat: '%H'
     },
+  autosize:false,
     margin:{
-      b:0
-    }
+      b:0,
+      t:0,
+      r:0,
+      l:20
+    },
+    height: 260,
+    width: 250
+
+
   };
 
   const traces = ['Cappuccino', 'Americano', 'Espresso', 'Tea'].map( s => {
@@ -160,24 +176,17 @@ async function make_plots(data) {
     timedata.y.push("1970-01-01 "+row[timeID].split(' ')[1]);
   });
 
-  
-  
-
-	Plotly.newPlot(mainplot, traces, flavour_hist_layout);
-	Plotly.newPlot(timehist, [timedata], time_hist_layout);
+  Plotly.newPlot(mainplot, traces, flavour_hist_layout);
+  Plotly.newPlot(timehist, [timedata], time_hist_layout);
 
   // register event handlers
-  //
-
-  function resize_all() {
-    [mainplot, timehist].forEach( 
-      p=>{Plotly.relayout(p, {width: p.offsetWidth});
-    });
-
-  }
-  
+  // 
   window.addEventListener('resize', resize_all);
-  document.getElementById('menu').addEventListener('transitionend', resize_all);
+  
+  const menu = document.getElementById('menu');
+  if (menu !== null){
+    menu.addEventListener('transitionend', resize_all);
+  }
   
 //    function adjust_histogram(start, end) {
 //      traces.forEach( d => {d.xbins = {'start': start, 'end': end, 'size': 1000*3600*24};});
@@ -192,10 +201,16 @@ async function make_plots(data) {
 //      reflavour_hist_layout["xaxis.range[1]"]
 //    );
 //  });
-
-
-
+  //
+  //
+  resize_all();
 }
+
+
+  function resize_all() {
+    Plotly.relayout(mainplot, {width: mainplot.offsetWidth});
+    Plotly.relayout(timehist, {width: timehist.offsetWidth});
+  }
 
 async function make_leaderboard(res){
 
@@ -218,9 +233,9 @@ async function make_leaderboard(res){
 
 async function init() {
 
-	const res_leader = await fetch("/api/leaderboard");
-	const res_week = await fetch("/api/leaderboard/sinceday/6");
-	const res_ts = await fetch("/api/timeseries");
+  const res_leader = await fetch("/api/leaderboard");
+  const res_week = await fetch("/api/leaderboard/sinceday/6");
+  const res_ts = await fetch("/api/timeseries");
 
   let data_week = await res_week.json();
   leaderDivWeekly.innerHTML = await make_leaderboard( data_week );
@@ -229,7 +244,8 @@ async function init() {
   leaderDiv.innerHTML = await make_leaderboard( await res_leader.json());
 
 
-  await make_plots( await res_ts.json())
+  await make_plots(await res_ts.json());
+
   
 }
 

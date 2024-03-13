@@ -48,7 +48,11 @@ def create_app(test_config=None):
 
     @app.route('/stats')
     def stats():
-        return render_template("stats.html")
+        hide_navbar=False
+        if 'hide_navbar' in request.args:
+            hide_navbar=True
+        return render_template("stats.html", hide_navbar=hide_navbar)
+
 
     @app.route('/docs')
     def docs():
