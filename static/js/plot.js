@@ -170,10 +170,12 @@ async function make_plots(data) {
   const timeID = await data["headers"].indexOf("timestamp");
   const userID = await data["headers"].indexOf("crsid");
 
-  (await data["table"]).forEach( row => {   
-    beantypes[row[typeID]].x.push(row[timeID]);
-    beantypes[row[typeID]].users.push(row[userID]);
-    timedata.y.push("1970-01-01 "+row[timeID].split(' ')[1]);
+  (await data["table"]).forEach( row => {
+    if (row[typeID] in beantypes){
+      beantypes[row[typeID]].x.push(row[timeID]);
+      beantypes[row[typeID]].users.push(row[userID]);
+      timedata.y.push("1970-01-01 "+row[timeID].split(' ')[1]);
+    }
   });
 
   Plotly.newPlot(mainplot, traces, flavour_hist_layout);
