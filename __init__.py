@@ -1,17 +1,44 @@
 from flask import Flask, g, request, current_app, render_template
+from flasgger import Swagger, LazyString, LazyJSONEncoder
+
 import json
 import os
-# app = Flask(__name__)
 
 
 # The factory function
 def create_app(test_config=None):
 
     app = Flask(__name__, instance_relative_config=True)
+    app.json_encoder = LazyJSONEncoder
+    app.config['SWAGGER'] = {
+            'title': 'Beanbot API',
+            'uiversion': 3,
+            'templates': 'templates/flasgger/swagger_ui.html'
+            }
 
-    @app.route('/ping', methods=['GET', 'POST'])
+    template = {
+            "info": {
+                "title": "Beanbot API",
+                "description": "API for accessing data pertaining to TCM's coffee habits",
+                "contact": {
+                    "responsibleOrganization": "als217",
+                    "responsibleDeveloper": "als217",
+                    "email": "CRSID AT CAM DOT AC DOT UK",
+                    "url": "spuriosity1.github.io",
+                    },
+                "termsOfService": "http://me.com/terms",
+                "version": "0.0.1"
+                },
+            # 'swaggerUiPrefix': LazyString(
+                #    lambda : request.environ.get('HTTP_X_SCRIPT_NAME', '')),
+            "basePath": "/api",  # base bash for blueprint registration
+            }
+    swagger = Swagger(app, template=template)
+
+
+    @app.route('/helloworld', methods=['GET', 'POST'])
     def ping():
-        return "Pong!"
+        return "Hello from TCM"
 
     # Defaults to be overridden
 #    app.config.from_mapping(
@@ -28,6 +55,7 @@ def create_app(test_config=None):
     except OSError:
         pass
 
+    # set up the API
     from beanbot import api
     app.register_blueprint(api.bp)
 
@@ -54,9 +82,6 @@ def create_app(test_config=None):
         return render_template("stats.html", hide_navbar=hide_navbar)
 
 
-    @app.route('/docs')
-    def docs():
-        return render_template("docs.html")
 
     @app.route('/contact')
     def contact():

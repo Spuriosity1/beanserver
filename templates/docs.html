@@ -10,69 +10,6 @@
 	<h2>Web API</h2>
 	<p>Angle brackets denote <strong>mandatory</strong> API parameters.
 
-	<code>/api/leaderboard</code>
-	<code>/api/leaderboard/after/&lt;begin&gt;</code>
-	<code>/api/leaderboard/sinceday/&lt;day_of_week&gt;</code>
-	<code>/api/leaderboard/interval/&lt;specification&gt;</code>
-
-	<div class="pure-g">
-		<div class="pure-u-1 pure-u-md-1-24"></div>
-		<div class="pure-u-1 pure-u-md-23-24">
-			<h3>Arguments:</h3>
-			<table class="pure-table">
-				<tr>
-					<td><code>begin</code></td>
-					<td>Date in format YYYY-MM-DDThh-mm-ss (interpreted as GMT)</td>
-				</tr>
-				<tr>
-					<td><code>day_of_week</code></td>
-					<td>A in integer 0-6, as in GNU cron, specifying the day to query since.</td>
-				</tr>
-				<tr>
-					<td><code>specification</code></td>
-					<td>A time period in a format similar to 1w4d10y5h5m5s, specifying a time interval to look back to. Each letter represents a multiplier: y= one year, w=one week, d = one day, h=one hour, m=one minute, s=one second.</td>
-				</tr>
-			</table>
-			<h3>Returns:</h3>
-			<code>
-				{
-				  "success": [bool],
-				  "data": [
-				{
-				  "crsid": [crsid],
-				  "shots": [number of shots in the interval]
-				},
-				...
-				]
-				}	    
-			</code>
-		</div>
-
-		<code>/userstats/&lt;crsid&gt;</code>
-		<code>/userstats/&lt;crsid&gt;/after/&lt;begin&gt;</code>
-		<h3>Arguments:</h3>
-		<table class="pure-table">
-			<tr>
-				<td><code>crsid</code></td>
-				<td>The user's crsid</td>
-			</tr>
-			<tr>
-				<td><code>begin</code></td>
-				<td>Date in format YYYY-MM-DDThh-mm-ss (interpreted as GMT)</td>
-			</tr>
-		</table>
-		<h3>Returns</h3>
-		<code>
-			{
-            "total_shots": [total_shots],
-            "totals": {
-							"espresso": 14,
-							"espresso2": 0,
-							"cappuccino": 4,
-							"..."
-            }
-		</code>
-
 
 
 	</div>

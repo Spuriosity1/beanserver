@@ -7,7 +7,6 @@ from beanbot.db import open_db
 bp = Blueprint('api', __name__, url_prefix='/api')
 
 
-
 # @bp.route('/userstats/')
 # def user_all_stats():
 #     db.open_db()
@@ -22,8 +21,32 @@ bp = Blueprint('api', __name__, url_prefix='/api')
 #                     WHERE crsid=? GROUP BY type",(row[0],)).fetchall()
 #                 }
 #     return res
+# TODO: this is needlessly overcomplicated- get_leaderboard_dt should be the
+# only endpoint. The user should be responsible for generating unix time.
 
 def get_leaderboard_dt(begin_dt):
+    """
+    utility function returning JSON shot leaderboard since a certain date
+    ---
+    parameters:
+        - name: begin_dt
+          in: path
+          type: integer
+          required: true
+          description: python datetime to aggregate since
+    responses:
+        200:
+            description: successful response
+            examples:
+                application/json: {
+                        "success": True,
+                        "data": [
+                            {"crsid": "aaa001", "shots": 51},
+                            {"crsid": "abc001", "shots": 11},
+                            {"crsid": "abc123", "shots": 0}
+                            ]
+                        }
+    """
     db = open_db()
     total_shots = db.execute(
             "SELECT sum(ncoffee), crsid FROM transactions \
@@ -36,26 +59,122 @@ def get_leaderboard_dt(begin_dt):
     return {"success": True,
             "data": data}
 
+
 @bp.route('/leaderboard/',
-          defaults={'begin': '2023-01-01T00-00-00'})
+          defaults={'begin': '2023-01-01T00:00:00'})
 @bp.route('/leaderboard/after/<begin>')
 def get_leaderboard(begin):
-    begin_dt = dt.datetime.strptime(begin,"%Y-%m-%dT%H-%M-%S")
+    """
+    Returns a tally of shots taken from <begin> to now.
+    ---
+    parameters:
+        - name: begin
+          in: path
+          type: string
+          required: false
+          description: >
+            ISO 8601 time (`YYYY-MM-DDThh:mm:ss` or `YYYY-MM-DD`)
+            from which to begin aggregating. If omitted, all users' records
+            are returned.
+    responses:
+        200:
+            description: successful response
+            examples:
+                application/json: {
+                        "success": True,
+                        "data": [
+                            {"crsid": "aaa001", "shots": 51},
+                            {"crsid": "abc001", "shots": 11},
+                            {"crsid": "abc123", "shots": 0}
+                            ]
+                        }
+    """
+    if 'T' not in begin:
+        begin = begin + "T00:00:00"
+
+    begin_dt = dt.datetime.strptime(begin, "%Y-%m-%dT%H:%M:%S")
     return get_leaderboard_dt(begin_dt)
+
 
 @bp.route('/leaderboard/sinceday/<day>')
 def get_leaderboard_day(day):
+    """
+    Returns a tally of shots taken since the last <day> of thw week.
+    ---
+    parameters:
+        - name: day
+          in: path
+          type: integer
+          required: true
+          description: Day of the UNIX week, 0-6 inclusive
+    responses:
+        200:
+            description: successful response
+            examples:
+                application/json: {
+                        "success": True,
+                        "data": [
+                            {"crsid": "aaa001", "shots": 51},
+                            {"crsid": "abc001", "shots": 11},
+                            {"crsid": "abc123", "shots": 0}
+                            ],
+                        "datesince": "2024-05-06T00:11:02"
+                        }
+    """
     today = dt.datetime.today()
     dest = today - dt.timedelta(days=(today.weekday() - int(day) - 1) % 7 + 1)
     dest = dest.replace(hour=0, minute=0, second=1)
     print(dest)
     payload = get_leaderboard_dt(dest)
-    payload['datesince'] = dest.strftime("%Y-%m-%d %H:%M:%S")
+    payload['datesince'] = dest.strftime("%Y-%m-%dT%H:%M:%S")
     return payload
 
-# Expects spec to ve in the form "1w4d10y5h5m5s" or similar
+
 @bp.route('/leaderboard/interval/<spec>')
 def get_leaderboard_interval(spec):
+    """
+    Tallies total shots taken since some time in the past,
+    with the interval specified in the format of many number-letter pairs.
+    ---
+    parameters:
+        - name: spec
+          in: path
+          type: string
+          required: true
+          description: |
+            Interval specification, in the format
+            `N#M#O#`
+            for integers `N,M,O` and # chosen from
+            * (y)ears
+            * (d)ays
+            * (w)eeks
+            * (h)ours
+            * (m)inutes
+            * (s)econds.
+          examples:
+            oneday:
+              value: 1d5h
+              summary: Since 1 day and 5 hours ago
+            complex:
+              value: 1w4d10y5h5m5s
+              summary: >
+                Since 1 week, 4 days, 10 years, 5 hours, 5 minutes 
+                and 5 seconds ago
+
+    responses:
+        200:
+            description: successful response
+            examples:
+                application/json: {
+                        "success": True,
+                        "data": [
+                            {"crsid": "aaa001", "shots": 51},
+                            {"crsid": "abc001", "shots": 11},
+                            {"crsid": "abc123", "shots": 0}
+                            ],
+                        "datesince": "2024-05-06T00:11:02"
+                        }
+    """
     spec = spec.replace(' ', '').lower()
     specifiers = re.findall(r'\D+', spec)
     quantifiers = re.findall(r'\d+', spec)
@@ -84,32 +203,130 @@ def get_leaderboard_interval(spec):
 
     tod = dt.datetime.now()
     a = tod - d
-    print(a)
-    return get_leaderboard_dt(a)
 
+    payload = get_leaderboard_dt(a)
+    payload['datesince'] = a.strftime("%Y-%m-%dT%H:%M:%S")
+    return payload
 
 
 @bp.route('/userstats/<crsid>',
-          defaults={'begin': '2023-01-01T00-00-00'})
+          defaults={'begin': '2023-01-01T00:00:00'})
 @bp.route('/userstats/<crsid>/after/<begin>')
 def user_stats(crsid, begin):
+    """
+    Gets the coffee habits of a particular user.
+    Note that "total_shots" is a different number to the sum of all totals -
+    americano2 and cappuccino2 count as two shots each.
+    ---
+    parameters:
+        - name: crsid
+          in: path
+          type: string
+          required: true
+          description: >
+            The regisered crsid of a particular user. Note that this tag is
+            user provided, so is not 100% guaranteed to be a valid crsid.
+        - name: begin
+          in: path
+          type: datetime
+          required: false
+          description: >
+            ISO 8601 time (`YYYY-MM-DDThh:mm:ss` or `YYYY-MM-DD`)
+            from which to begin aggregating. If omitted, all users' records
+            are returned.
+
+    responses:
+        200:
+            description: successful response for an existing user
+            examples:
+                application/json: {
+                          "success": true,
+                          "total_shots": [
+                            35
+                          ],
+                          "totals": {
+                            "americano2": 2,
+                            "cappuccino": 1,
+                            "cappuccino2": 1,
+                            "espresso": 20,
+                            "espresso2": 4
+                          }
+                        }
+
+
+        201:
+            description: Call on a nonexistent user
+            examples:
+                application/json: {
+                          "success": false,
+                          "reason": "CRSID <idontexist> is not registered"
+                        }
+
+    """
+
     db = open_db()
-    begin_posix = dt.datetime.strptime(begin, "%Y-%m-%dT%H-%M-%S").strftime('%s')
-    total_shots = db.execute(
+    if 'T' not in begin:
+        begin = begin + "T00:00:00"
+
+    # check that user exists
+    r1 = db.execute(
+            "SELECT count(crsid) FROM users WHERE crsid=?", (crsid,))
+
+    found_id, = r1.fetchone()
+    if found_id == 0:
+        return {
+                "success": False,
+                "reason": f"CRSID <{crsid}> is not registered"
+                }, 201
+
+    begin_posix = dt.datetime.strptime(begin, "%Y-%m-%dT%H:%M:%S").strftime('%s')
+    total_shots, = db.execute(
             "SELECT sum(ncoffee) FROM transactions \
                     WHERE crsid=? AND ts > ?",
             (crsid, begin_posix)).fetchone()
-    totals = g.db.execute(
+    totals = db.execute(
             "SELECT type,count(ts) FROM transactions \
                     WHERE crsid=? AND ts > ? GROUP BY type",
             (crsid, begin_posix)).fetchall()
+
+    if total_shots is None:
+        total_shots = 0
     return {
+            "success": True,
             "total_shots": total_shots,
             "totals": {r[0]: r[1] for r in totals}
             }
 
+
 @bp.route('/timeseries')
 def get_timeseries():
+    """
+    Returns the full time series of transactions.
+    ---
+    parameters:
+        - name: crsid
+          in: path
+          type: string
+          required: false
+          description: >
+            The regisered crsid of a particular user (if omitted, all users'
+            records are returned). Note that this tag is
+            user provided, so is not 100% guaranteed to be a valid crsid.
+        - name: after
+          in: path
+          type: string
+          required: false
+          description: >
+            ISO 8601 time (`YYYY-MM-DDThh:mm:ss` or `YYYY-MM-DD`)
+            from which to begin aggregating.
+        - name: before
+          in: path
+          type: string
+          required: false
+          description: >
+            ISO 8601 time (`YYYY-MM-DDThh:mm:ss` or `YYYY-MM-DD`)
+            at which to stop aggregating.
+            """
     db = open_db()
     hdr = ["DATETIME(ts,'unixepoch')", "type", "crsid"]
     crsid = request.args.get('crsid')
@@ -123,17 +340,17 @@ def get_timeseries():
         conds += [("crsid=?", crsid)]
 
     if after is not None:
-        after = dt.datetime.strptime(after, "%Y-%m-%dT%H-%M-%S").strftime('%s')
+        after = dt.datetime.strptime(after, "%Y-%m-%dT%H:%M:%S").strftime('%s')
         conds += [('ts >= ?', after)]
 
     if before is not None:
-        before = dt.datetime.strptime(before, "%Y-%m-%dT%H-%M-%S").strftime('%s')
+        before = dt.datetime.strptime(before, "%Y-%m-%dT%H:%M:%S").strftime('%s')
         conds += [('ts <= ?', before)]
 
     q = "SELECT " + ", ".join(hdr) + " FROM transactions"
     if len(conds) > 0:
         q += " WHERE " + " AND ".join([x[0] for x in conds])
-    r = g.db.execute(q, tuple([x[1] for x in conds]))
+    r = db.execute(q, tuple([x[1] for x in conds]))
 
     data = r.fetchall()
     hdr[0] = 'timestamp'
@@ -145,14 +362,42 @@ def get_timeseries():
 
 @bp.route('/existsuser/<crsid>')
 def exists_user(crsid):
+    """
+    Tests if a user exists, and returns the index of their RFID card if they do.
+    ---
+    parameters:
+        - name: crsid
+          in: path
+          type: string
+          required: true
+          description: >
+            The regisered crsid of a particular user. Note that this tag is
+            user provided, so is not 100% guaranteed to be a valid crsid.
+    responses:
+        200:
+            description: successful response for an existing user
+            examples:
+                application/json: {
+                    "rfid": 775545127858,
+                    "user-exists": true
+                }
+
+        201:
+            description: unsuccessful response - user does not exist
+            examples:
+                application/json: {
+                    "user-exists": false
+                        }
+
+    """
     # check if user exists at all
     db = open_db()
     r1 = db.execute(
             "SELECT count(crsid), rfid FROM users WHERE crsid=?", (crsid,))
     found_id, rfid = r1.fetchone()
     if found_id != 0:
-        return {"user-exists": True, "rfid": rfid}
+        return {"user-exists": True, "rfid": rfid}, 200
 
-    return {"user-exists": False}
+    return {"user-exists": False}, 201
 
 
