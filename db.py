@@ -22,7 +22,6 @@ Are you sure you want to proceed?''', abort=True)
 
 def init_app(app):
     app.teardown_appcontext(close_db)
-    print("register command")
     app.cli.add_command(init_db_command)
 
 def open_db():

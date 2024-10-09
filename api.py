@@ -1,5 +1,6 @@
 from flask import Blueprint, g, request, render_template
 import datetime as dt
+from flasgger import Swagger, LazyString, LazyJSONEncoder
 import re
 
 from beanbot.db import open_db
@@ -399,5 +400,4 @@ def exists_user(crsid):
         return {"user-exists": True, "rfid": rfid}, 200
 
     return {"user-exists": False}, 201
-
 

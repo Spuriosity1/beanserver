@@ -1,8 +1,9 @@
-from flask import Flask, g, request, current_app, render_template
+from flask import Flask, g, request, current_app, render_template, send_file
 from flasgger import Swagger, LazyString, LazyJSONEncoder
 
 import json
 import os
+
 
 
 # The factory function
@@ -29,8 +30,8 @@ def create_app(test_config=None):
                 "termsOfService": "http://me.com/terms",
                 "version": "0.0.1"
                 },
-            # 'swaggerUiPrefix': LazyString(
-                #    lambda : request.environ.get('HTTP_X_SCRIPT_NAME', '')),
+            'swaggerUiPrefix': LazyString(
+                  lambda : request.environ.get('HTTP_X_SCRIPT_NAME', '')),
             "basePath": "/api",  # base bash for blueprint registration
             }
     swagger = Swagger(app, template=template)
@@ -86,6 +87,15 @@ def create_app(test_config=None):
     @app.route('/contact')
     def contact():
         return render_template("contact.html")
+
+    @app.route('/backup')
+    def send_db_copy():
+        if (os.path.isfile(app.config['PRIMARYDB'])):
+            return send_file(app.config['PRIMARYDB'], as_attachment=True)
+        else:
+            s =  "database is misconfigured (this is very bad)"
+            s += f"No file at {app.config['PRIMARYDB']}"
+            return s, 400
 
 #    @bp.route('/newuser/<crsid>', methods=['POST'])
 #    @auth.login_required
