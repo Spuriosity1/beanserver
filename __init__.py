@@ -9,7 +9,7 @@ import os
 def create_app(test_config=None):
 
     app = Flask(__name__, instance_relative_config=True)
-    app.json_encoder = LazyJSONEncoder
+#    app.json_encoder = LazyJSONEncoder
     app.config['SWAGGER'] = {
             'title': 'Beanbot API',
             'uiversion': 3,
