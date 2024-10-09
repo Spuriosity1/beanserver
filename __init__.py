@@ -10,7 +10,7 @@ import os
 def create_app(test_config=None):
 
     app = Flask(__name__, instance_relative_config=True)
-#    app.json_encoder = LazyJSONEncoder
+    app.json_encoder = LazyJSONEncoder
     app.config['SWAGGER'] = {
             'title': 'Beanbot API',
             'uiversion': 3,
@@ -30,8 +30,7 @@ def create_app(test_config=None):
                 "termsOfService": "http://me.com/terms",
                 "version": "0.0.1"
                 },
-            'swaggerUiPrefix': LazyString(
-                  lambda : request.environ.get('HTTP_X_SCRIPT_NAME', '')),
+            # 'swaggerUiPrefix': LazyString(  lambda : request.environ.get('HTTP_X_SCRIPT_NAME', '')),
             "basePath": "/api",  # base bash for blueprint registration
             }
     swagger = Swagger(app, template=template)
@@ -40,12 +39,6 @@ def create_app(test_config=None):
     @app.route('/helloworld', methods=['GET', 'POST'])
     def ping():
         return "Hello from TCM"
-
-    # Defaults to be overridden
-#    app.config.from_mapping(
-#            PRIMARYDB=os.path.join(app.instance_path, 'testDB1.sqlite'),
-#            SECONDARYDB=os.path.join(app.instance_path, 'testDB2.sqlite')
-#            )
 
     if test_config is None:
         app.config.from_file("config.json", load=json.load)
@@ -82,8 +75,6 @@ def create_app(test_config=None):
             hide_navbar=True
         return render_template("stats.html", hide_navbar=hide_navbar)
 
-
-
     @app.route('/contact')
     def contact():
         return render_template("contact.html")
@@ -93,7 +84,7 @@ def create_app(test_config=None):
         if (os.path.isfile(app.config['PRIMARYDB'])):
             return send_file(app.config['PRIMARYDB'], as_attachment=True)
         else:
-            s =  "database is misconfigured (this is very bad)"
+            s = "database is misconfigured (this is very bad)"
             s += f"No file at {app.config['PRIMARYDB']}"
             return s, 400
 
