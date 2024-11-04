@@ -89,11 +89,17 @@ def get_leaderboard(begin):
                             {"crsid": "abc123", "shots": 0}
                             ]
                         }
+
+        400:
+            descripton: malformed request
     """
     if 'T' not in begin:
         begin = begin + "T00:00:00"
 
-    begin_dt = dt.datetime.strptime(begin, "%Y-%m-%dT%H:%M:%S")
+    try:
+        begin_dt = dt.datetime.strptime(begin, "%Y-%m-%dT%H:%M:%S")
+    except ValueError:
+        return {"success": False, "reason": "Malformed request"}
     return get_leaderboard_dt(begin_dt)
 
 
@@ -125,7 +131,7 @@ def get_leaderboard_day(day):
     today = dt.datetime.today()
     dest = today - dt.timedelta(days=(today.weekday() - int(day) - 1) % 7 + 1)
     dest = dest.replace(hour=0, minute=0, second=1)
-    print(dest)
+
     payload = get_leaderboard_dt(dest)
     payload['datesince'] = dest.strftime("%Y-%m-%dT%H:%M:%S")
     return payload
