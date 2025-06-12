@@ -50,13 +50,13 @@ def create_app(test_config=None):
         pass
 
     # set up the API
-    from beanbot import api
+    from beanserver import api
     app.register_blueprint(api.bp)
 
-#    from beanbot import auth
+#    from beanserver import auth
 #    app.register_blueprint(auth.bp)
 
-    from beanbot.db import init_app
+    from beanserver.db import init_app
     init_app(app)
 
     @app.route('/favicon.ico')
