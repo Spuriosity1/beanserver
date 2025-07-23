@@ -3,7 +3,7 @@ import datetime as dt
 from flasgger import Swagger, LazyString, LazyJSONEncoder
 import re
 
-from beanbot.db import open_db
+from beanserver.db import open_db
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 

@@ -34,6 +34,9 @@ def open_db():
         elif (os.path.isfile(cfg['SECONDARYDB'])):
             g.db = sqlite3.connect(cfg['SECONDARYDB'])
             g.db_idx = 2
+        else:
+            raise Exception(f"Databases miscofigured- could not open %s or %s" %
+                            (cfg['PRIMARYDB'], cfg['SECONDARYDB']))
     except sqlite3.OperationalError:
         return None
     
