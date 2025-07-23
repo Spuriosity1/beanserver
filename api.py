@@ -6,7 +6,6 @@ import datetime as dt
 from flasgger import Swagger, LazyString, LazyJSONEncoder
 import re
 import sqlite3
-import requests
 
 from beanserver.db import open_db
 

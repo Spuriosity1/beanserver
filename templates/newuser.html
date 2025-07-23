@@ -1,0 +1,41 @@
+
+{% extends 'base.html' %}
+
+
+{% block javascript_include %}<{% endblock %}
+
+{% block content %}
+
+  <div class="header">
+    <h1>{% block title %} Add a new CRSID {% endblock %}</h1>
+  </div>
+   
+   
+<div style="max-width: 500px; margin: 3em auto; padding: 2em; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: #fdfdfd; font-family: sans-serif;">
+  <form class="pure-form" action="/api/newuser" method="post">
+    <table class="pure-table" style="width: 100%;">
+      <tbody>
+        <tr>
+          <td><label for="crsid">CRSID</label></td>
+          <td><input id="crsid" name="crsid" maxlength="8" required></td>
+        </tr>
+        <tr>
+          <td><label for="password">Password</label></td>
+          <td><input id="password" name="password" type="password" required></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="text-align: center;">
+            <button type="submit" class="pure-button pure-button-primary">Submit</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </form>
+</div>
+
+
+{% endblock %}
+
+
+{% block javascript %}
+{% endblock %}
