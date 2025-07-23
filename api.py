@@ -1,7 +1,12 @@
-from flask import Blueprint, g, request, render_template
+from flask import Blueprint, g, request, render_template, current_app
+#from flask_limiter import Limiter
+#from flask_limiter.util import get_remote_address
+
 import datetime as dt
 from flasgger import Swagger, LazyString, LazyJSONEncoder
 import re
+import sqlite3
+import requests
 
 from beanserver.db import open_db
 
@@ -197,6 +202,7 @@ def get_leaderboard_interval(spec):
             'h': 'hours',
             'w': 'weeks'
             }
+    lhs = []
     for s, q in zip(specifiers, quantifiers):
         lhs = lmap.get(s)
         if lhs is None:
@@ -406,4 +412,36 @@ def exists_user(crsid):
         return {"user-exists": True, "rfid": rfid}, 200
 
     return {"user-exists": False}, 201
+
+
+
+@bp.route('/newuser', methods=['POST'])
+def create_user():
+    crsid = request.form.get('crsid', '').strip().lower()
+    password = request.form.get('password', '')
+
+    if not password==current_app.config['BOT_PASSWORD']:
+        return {"reason": "Incorrect Password"}, 403
+    
+    if not crsid:
+        return {"reason": "Missing CRSId in request body"}, 400
+
+    if len(crsid) > 8:
+        return {"reason": "CRSId must be <= 8 characters"}, 400
+
+    _db = open_db()
+    try:
+        res = {
+            "added_user": True,
+            "added_crsid": crsid
+            }
+        _db.execute(
+                "INSERT INTO users (crsid, debt) VALUES (?, ?)",
+            (crsid, 0))
+        _db.commit()
+        return res, 201
+    except sqlite3.IntegrityError as e:
+        return {"reason": f"User {crsid} already exists"}, 400
+
+
 

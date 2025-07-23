@@ -1,6 +1,7 @@
 from flask import Flask, g, request, current_app, render_template, send_file
 from flasgger import Swagger, LazyString, LazyJSONEncoder
 
+import sqlite3
 import json
 import os
 
@@ -75,6 +76,10 @@ def create_app(test_config=None):
             hide_navbar=True
         return render_template("stats.html", hide_navbar=hide_navbar)
 
+    @app.route('/newcrsid')
+    def newcrsid():
+        return render_template("newuser.html")
+
     @app.route('/contact')
     def contact():
         return render_template("contact.html")
@@ -88,34 +93,4 @@ def create_app(test_config=None):
             s += f"No file at {app.config['PRIMARYDB']}"
             return s, 400
 
-#    @bp.route('/newuser/<crsid>', methods=['POST'])
-#    @auth.login_required
-#    def create_user(crsid):
-#        if len(crsid) > 8:
-#            return {"reason": "crsid must be <= 8 characters"}, 400
-#        if 'debt' not in request.args:
-#            return {"reason": "Malformed query: debt is mandartory"}, 400
-#        debt = request.args['debt']
-
-#        db.open_db()
-#        try:
-#            res = {
-#                "added_user": True,
-#                "added_init_transactions": False
-#                }
-#            g.db.execute(
-#                    "INSERT INTO users (crsid, debt) VALUES (?, ?)",
-#                (crsid, debt))
-#            if debt != 0:
-#                g.db.execute(
-#                        "INSERT INTO transactions (ts, crsid, debit, type, ncoffee) VALUES (datetime('now'), ?, ?, 'prevbalance', 0)",
-#                        (crsid, debt))
-#                res["added_init_transactions"] = True
-#            g.db.commit()
-#            return res
-#        except sqlite3.IntegrityError as e:
-#            return {"reason": f"User {crsid} already exists"}, 400
-#        # this is a really, really bad idea...
-
     return app
-

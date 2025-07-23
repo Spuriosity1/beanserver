@@ -5,6 +5,7 @@ import click
 
 #DB construction
 def init_db():
+    cfg =current_app.config
     with current_app.open_resorce('create_database.sql') as f:
         sqlite3.connect(cfg['PRIMARYDB']).executescript(f.read().decode('utf8'))
         sqlite3.connect(cfg['SECONDARYDB']).executescript(f.read().decode('utf8'))
