@@ -29,7 +29,11 @@
     <p>
     This box cannot read the contents of your RFID card. It is therefore necessary to associate your crsid with your card in a short registration step.
     </p>
-    <p> If you tap an unregistered card, you will be presented with the following screen:</p>
+<ol>
+	<li>Click <a href="/newcrsid">this link</a> and add your crsid (the password is RDC2025).</li>
+	<li>Tap your card on the box.</li>
+</ol>
+<p> You will be presented with the following screen:</p>
     <div class="pure-g">
       <div class="pure-g-1" style="background-color:black;"><img class="pure-img-responsive" style="padding:10px;" src="/static/img/unrecognisedRFID.png"></div>
     </div>
@@ -44,14 +48,7 @@
     <h3>If you make a mistake</h3>
     <p>Email db985 to re-associate your card with the correct CRSid.</p>
     <h3>If your CRSid is not shown</h3>
-    <p>Email db985 to add your CRSid to the database. If you are impatient, you can instead
-    Scroll to the special value <code>OTHER</code>,
-    </p>
-    <div class="pure-g">
-      <div class="pure-g-1" style="background-color:black"><img class="pure-img-responsive" style="padding:10px;" src="/static/img/selectCRSID2.png"></div>
-    </div>
-    <p>and enter your crsid (or indeed any psuedonym you desire) by hand.</p>
-
+    <p>Ensure that you have successfully added your CRSID using <a href="/newcrsid">this link</a>. If issues persist, email db985 to add your CRSid to the database manually. 
   <h2>FAQ</h2>
   <h3>Who is maintining this?</h3>
   <p>Diego Barberena, db985@cam.ac.uk</p>
@@ -80,3 +77,4 @@
 
 {% block javascript %}
 {% endblock %}
+ 
