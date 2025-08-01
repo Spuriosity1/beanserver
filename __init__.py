@@ -62,7 +62,7 @@ def create_app(test_config=None):
 
     @app.route('/favicon.ico')
     def faviconIt():
-        return app.serve_static('favicon.ico')
+        return app.send_file('favicon.ico')
 
     @app.route('/')
     @app.route('/index')
