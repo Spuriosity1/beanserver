@@ -418,29 +418,25 @@ def exists_user(crsid):
 def create_user():
     crsid = request.form.get('crsid', '').strip().lower()
     password = request.form.get('password', '')
-
-    if not password==current_app.config['BOT_PASSWORD']:
-        return {"reason": "Incorrect Password"}, 403
+    
+    if not password == current_app.config['BOT_PASSWORD']:
+        return render_template('newuser.html', error="Incorrect Password"), 403
     
     if not crsid:
-        return {"reason": "Missing CRSId in request body"}, 400
-
+        return render_template('newuser.html', error="Missing CRSId in request body"), 400
     if len(crsid) > 8:
-        return {"reason": "CRSId must be <= 8 characters"}, 400
-
+        return render_template('newuser.html', error="CRSId must be <= 8 characters"), 400
+    
     _db = open_db()
     try:
-        res = {
-            "added_user": True,
-            "added_crsid": crsid
-            }
         _db.execute(
-                "INSERT INTO users (crsid, debt) VALUES (?, ?)",
+            "INSERT INTO users (crsid, debt) VALUES (?, ?)",
             (crsid, 0))
         _db.commit()
-        return res, 201
+        return render_template('newuser.html', 
+                               success=f'''User {crsid} added successfully!
+Tap your card on the box to associate it.'''), 201
     except sqlite3.IntegrityError as e:
-        return {"reason": f"User {crsid} already exists"}, 400
-
+        return render_template('newuser.html', error=f"User {crsid} already exists"), 400
 
 
