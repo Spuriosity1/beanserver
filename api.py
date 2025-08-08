@@ -7,6 +7,7 @@ from flasgger import Swagger, LazyString, LazyJSONEncoder
 import re
 import sqlite3
 
+
 from beanserver.db import open_db
 
 bp = Blueprint('api', __name__, url_prefix='/api')
@@ -271,7 +272,7 @@ def user_stats(crsid, begin):
             examples:
                 application/json: {
                           "success": false,
-                          "reason": "CRSID <idontexist> is not registered"
+                          "reason": "CRSID 'idontexist' is not registered"
                         }
 
     """
@@ -288,7 +289,7 @@ def user_stats(crsid, begin):
     if found_id == 0:
         return {
                 "success": False,
-                "reason": f"CRSID <{crsid}> is not registered"
+                "reason": f"CRSID '{crsid}' is not registered"
                 }, 201
 
     begin_posix = dt.datetime.strptime(begin, "%Y-%m-%dT%H:%M:%S").strftime('%s')
@@ -418,7 +419,7 @@ def get_balance(crsid):
             examples:
                 application/json: {
                           "success": false,
-                          "reason": "CRSID <idontexist> is not registered"
+                          "reason": "CRSID 'idontexist' is not registered"
                         }
 
     """
@@ -432,7 +433,7 @@ def get_balance(crsid):
     if found_id == 0:
         return {
                 "success": False,
-                "reason": f"CRSID <{crsid}> is not registered"
+                "reason": f"CRSID '{crsid}' is not registered"
                 }, 201
 
     debt, = db.execute(
@@ -444,12 +445,15 @@ def get_balance(crsid):
 
     if debt == expected_debt:
         return {
-                "succes": True,
+                "success": True,
                 "debt": debt
                 }
     else:
+        # this is very bad, it means something has gone horribly wrong
+        # automatically flag the problem and email a maintainer
+        current_app.logger.error(f"Broken account: {crsid} checksums do not match, debt={debt}, sum(debit)={expected_debt}")
         return {
-                "succes": False,
+                "success": False,
                 "reason": "Checksum inconsistent",
                 "debt": debt,
                 "debit_sum": expected_debt
@@ -545,15 +549,19 @@ def create_user():
         return render_template('newuser.html', error="CRSId must be <= 8 characters"), 400
     
     _db = open_db()
+
     try:
         _db.execute(
             "INSERT INTO users (crsid, debt) VALUES (?, ?)",
             (crsid, 0))
         _db.commit()
+
+        current_app.logger.info(f"Successfully added new user {crsid}")
         return render_template('newuser.html', 
                                success=f'''User {crsid} added successfully!
 Tap your card on the box to associate it.'''), 201
     except sqlite3.IntegrityError as e:
+        current_app.logger.warning(f"User {crsid} already exists in table")
         return render_template('newuser.html', error=f"User {crsid} already exists"), 400
 
 
