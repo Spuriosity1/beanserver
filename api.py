@@ -292,8 +292,8 @@ def user_stats(crsid, begin):
                 }, 201
 
     begin_posix = dt.datetime.strptime(begin, "%Y-%m-%dT%H:%M:%S").strftime('%s')
-    total_shots, = db.execute(
-            "SELECT sum(ncoffee) FROM transactions \
+    total_shots, debt = db.execute(
+            "SELECT sum(ncoffee), sum(debit) FROM transactions \
                     WHERE crsid=? AND ts > ?",
             (crsid, begin_posix)).fetchone()
     totals = db.execute(
@@ -306,7 +306,8 @@ def user_stats(crsid, begin):
     return {
             "success": True,
             "total_shots": total_shots,
-            "totals": {r[0]: r[1] for r in totals}
+            "totals": {r[0]: r[1] for r in totals},
+            "spend": debt
             }
 
 
@@ -328,8 +329,7 @@ def get_timeseries():
           in: path
           type: string
           required: false
-          description: >
-            ISO 8601 time (`YYYY-MM-DDThh:mm:ss` or `YYYY-MM-DD`)
+          description: > ISO 8601 time (`YYYY-MM-DDThh:mm:ss` or `YYYY-MM-DD`)
             from which to begin aggregating.
         - name: before
           in: path
@@ -338,12 +338,19 @@ def get_timeseries():
           description: >
             ISO 8601 time (`YYYY-MM-DDThh:mm:ss` or `YYYY-MM-DD`)
             at which to stop aggregating.
+        - name: include_debit
+          in: path
+          type: bool
+          required: false
+          description: >
+            Flag to include the 'debit' part of the transaction
             """
     db = open_db()
     hdr = ["DATETIME(ts,'unixepoch')", "type", "crsid"]
     crsid = request.args.get('crsid')
     after = request.args.get('after')
     before = request.args.get('before')
+    include_debit = request.args.get('include_debit') is not None
 
     conds = []
 
@@ -359,18 +366,95 @@ def get_timeseries():
         before = dt.datetime.strptime(before, "%Y-%m-%dT%H:%M:%S").strftime('%s')
         conds += [('ts <= ?', before)]
 
+    if include_debit:
+        hdr += ['debit']
+
+    condstring = " AND ".join([x[0] for x in conds])
+
     q = "SELECT " + ", ".join(hdr) + " FROM transactions"
     if len(conds) > 0:
-        q += " WHERE " + " AND ".join([x[0] for x in conds])
+        q += " WHERE " + condstring
+    q += "ORDER BY ts"
     r = db.execute(q, tuple([x[1] for x in conds]))
 
     data = r.fetchall()
     hdr[0] = 'timestamp'
 
-    return {
+    retval = {
             "headers": hdr,
             "table": data
-            }
+            };
+    
+    return retval;
+
+
+@bp.route('/balance/<crsid>')
+def get_balance(crsid):
+    """
+    Gets the curent balance of the specified user, returned as a 
+    negative number for debt
+    ---
+    parameters:
+        - name: crsid
+          in: path
+          type: string
+          required: true
+          description: >
+            The regisered crsid of a particular user. Note that this tag is
+            user provided, so is not 100% guaranteed to be a valid crsid.
+
+    responses:
+        200:
+            description: successful response for an existing user
+            examples:
+                application/json: {
+                        "success": false,
+                          "balance": -2100
+                        }
+
+
+        201:
+            description: Call on a nonexistent user
+            examples:
+                application/json: {
+                          "success": false,
+                          "reason": "CRSID <idontexist> is not registered"
+                        }
+
+    """
+    db = open_db()
+
+
+    r1 = db.execute(
+            "SELECT count(crsid) FROM users WHERE crsid=?", (crsid,))
+
+    found_id, = r1.fetchone()
+    if found_id == 0:
+        return {
+                "success": False,
+                "reason": f"CRSID <{crsid}> is not registered"
+                }, 201
+
+    debt, = db.execute(
+            "SELECT debt FROM users WHERE crsid = ?", 
+            (crsid,)).fetchone()
+    expected_debt, = db.execute(
+            "SELECT IFNULL(SUM(debit), 0) FROM transactions WHERE crsid = ?",
+            (crsid,)).fetchone()
+
+    if debt == expected_debt:
+        return {
+                "succes": True,
+                "debt": debt
+                }
+    else:
+        return {
+                "succes": False,
+                "reason": "Checksum inconsistent",
+                "debt": debt,
+                "debit_sum": expected_debt
+                }
+
 
 @bp.route('/existsuser/<crsid>')
 def exists_user(crsid):
@@ -411,6 +495,39 @@ def exists_user(crsid):
         return {"user-exists": True, "rfid": rfid}, 200
 
     return {"user-exists": False}, 201
+
+
+
+@bp.route('/listusers')
+def listusers():
+    """
+    Returns a list of all users in the system as a dict, with values showing if a non-null RFID is associated
+    ---
+    parameters:
+    responses:
+        200:
+            description: successful response for an existing user
+            examples:
+                application/json: {
+                        "success": true, 
+                        "users": {
+                            "abc123": true, 
+                            "abc183": false, 
+                            "abc103": true,
+                            }
+
+    """
+    # check if user exists at all
+    db = open_db()
+    res = db.execute(
+            "SELECT crsid, rfid is not null FROM users ORDER BY crsid")
+    return {
+            "success": True,
+            "users": {
+                k: r for k,r in res.fetchall()
+                }
+            }
+
 
 
 

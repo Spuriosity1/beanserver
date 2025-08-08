@@ -62,7 +62,7 @@ def create_app(test_config=None):
 
     @app.route('/favicon.ico')
     def faviconIt():
-        return app.send_file('favicon.ico')
+        return app.send_from_directory('static','favicon.ico')
 
     @app.route('/')
     @app.route('/index')
@@ -79,6 +79,10 @@ def create_app(test_config=None):
     @app.route('/newcrsid')
     def newcrsid():
         return render_template("newuser.html")
+
+    @app.route('/balance')
+    def balance():
+        return render_template("check_balance.html")
 
     @app.route('/contact')
     def contact():
