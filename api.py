@@ -375,7 +375,8 @@ def get_timeseries():
     q = "SELECT " + ", ".join(hdr) + " FROM transactions"
     if len(conds) > 0:
         q += " WHERE " + condstring
-    q += "ORDER BY ts"
+    q += " ORDER BY ts"
+    # print(q)
     r = db.execute(q, tuple([x[1] for x in conds]))
 
     data = r.fetchall()
