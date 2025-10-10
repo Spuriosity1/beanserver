@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block javascript_include %}
+<!-- plotly -->
+<script type="text/javascript" src="/static/lib/plotly-2.24.1.min.js" charset="utf-8"></script>
+{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1>{% block title %} Balance Inquiry {% endblock %}</h1>
+</div>
+
+<div class="content">
+     <div class="container">
+        
+        <div class="input-container">
+            <input 
+                type="text" 
+                id="crsidInput" 
+                placeholder="Enter CRSID (e.g. abc123)" 
+                autocomplete="off"
+            />
+            <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
+        </div>
+        
+        <button id="checkButton" class="check-button">Check Balance</button>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+
+    <div class="pure-g">
+      <div id="main-plot" class="pure-u-1"></div>
+    </div>
+
+    <div class="container">
+        <table class="pure-table" id="transactionTable" style="display: none">
+        </table>
+    </div>
+
+  </div>
+
+{% endblock %}
+
+{% block javascript %}
+<script src='static/js/balance.js'>
+{% endblock %}
