@@ -80,6 +80,10 @@ def create_app(test_config=None):
     def newcrsid():
         return render_template("newuser.html")
 
+    @app.route('/payment')
+    def payment():
+        return render_template("newpayment.html")
+
     @app.route('/balance')
     def balance():
         return render_template("check_balance.html")

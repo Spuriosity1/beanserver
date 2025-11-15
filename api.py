@@ -566,3 +566,81 @@ Tap your card on the box to associate it.'''), 201
         return render_template('newuser.html', error=f"User {crsid} already exists"), 400
 
 
+@bp.route('/newpayment', methods=['POST'])
+def create_payment():
+    crsid = request.form.get('crsid', '').strip().lower()
+    password = request.form.get('password', '')
+    payment_str = request.form.get('payment', '').strip()
+
+    
+    if not password == current_app.config['PAY_PASSWORD']:
+        return render_template('newpayment.html', error="Incorrect Password"), 403
+    
+    if not crsid:
+        return render_template('newpayment.html', error="Missing CRSId in request body"), 400
+    if len(crsid) > 8:
+        return render_template('newpayment.html', error="CRSId must be <= 8 characters"), 400
+    if not payment_str:
+        return render_template('newpayment.html', error="Missing payment amount"), 400
+
+
+    try:
+    	payment_float = float(payment_str)
+    	if payment_float <= 0:          
+        	raise ValueError
+    	payment = int(round(payment_float * 100))
+    except ValueError:
+    	return render_template('newpayment.html', error="Payment must be a positive number"), 400
+
+
+    _db=open_db()
+
+    user_exists= _db.execute("SELECT COUNT(*) FROM users WHERE crsid = ?",
+			(crsid,)
+		).fetchone()[0]
+
+    if user_exists == 0:
+        return render_template('newpayment.html', error=f"No user found with CRSid '{crsid}'"), 400
+
+    ts = int(dt.datetime.utcnow().timestamp())
+
+    try:
+        _db.execute("BEGIN TRANSACTION;")
+
+        _db.execute(
+            "UPDATE users SET debt = debt - ? WHERE crsid = ?",
+            (payment, crsid)
+        )
+
+        _db.execute(
+            "INSERT INTO transactions (ts, crsid, rfid, type, debit, ncoffee) VALUES (?, ?, ?, ?, ?, ?)",
+            (ts, crsid, -1, 'Payment', -payment, 0)
+        )
+
+        _db.commit()
+        current_app.logger.info(f"Recorded payment of {payment} pence for user {crsid}")
+
+    except sqlite3.Error as e:
+       	_db.rollback()
+       	current_app.logger.error(f"Failed to record payment for {crsid}: {e}")
+       	return render_template('newpayment.html', error="Database error"), 500
+
+
+
+    total_debit = _db.execute(
+        "SELECT IFNULL(SUM(debit), 0) FROM transactions WHERE crsid = ?",
+        (crsid,)
+    ).fetchone()[0]
+
+    current_debt = _db.execute(
+        "SELECT debt FROM users WHERE crsid = ?",
+        (crsid,)
+    ).fetchone()[0]
+
+    if total_debit != current_debt:
+        current_app.logger.error(f"Debt mismatch for {crsid}: total_debit={total_debit}, debt={current_debt}")
+        return render_template('newpayment.html', error="Debt mismatch after update, contact db985"), 500
+       
+    return render_template('newpayment.html', success=f"Successfully recorded payment of {payment} pence for {crsid}"), 400
+
+
