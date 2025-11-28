@@ -330,7 +330,8 @@ def get_timeseries():
           in: path
           type: string
           required: false
-          description: > ISO 8601 time (`YYYY-MM-DDThh:mm:ss` or `YYYY-MM-DD`)
+          description: >
+            ISO 8601 time (`YYYY-MM-DDThh:mm:ss` or `YYYY-MM-DD`)
             from which to begin aggregating.
         - name: before
           in: path
@@ -508,7 +509,6 @@ def listusers():
     """
     Returns a list of all users in the system as a dict, with values showing if a non-null RFID is associated
     ---
-    parameters:
     responses:
         200:
             description: successful response for an existing user
@@ -520,6 +520,7 @@ def listusers():
                             "abc183": false, 
                             "abc103": true,
                             }
+                        }
 
     """
     # check if user exists at all
@@ -532,8 +533,6 @@ def listusers():
                 k: r for k,r in res.fetchall()
                 }
             }
-
-
 
 
 @bp.route('/newuser', methods=['POST'])
@@ -585,19 +584,19 @@ def create_payment():
 
 
     try:
-    	payment_float = float(payment_str)
-    	if payment_float <= 0:          
-        	raise ValueError
-    	payment = int(round(payment_float * 100))
+        payment_float = float(payment_str)
+        if payment_float <= 0:          
+            raise ValueError
+        payment = int(round(payment_float * 100))
     except ValueError:
-    	return render_template('newpayment.html', error="Payment must be a positive number"), 400
+        return render_template('newpayment.html', error="Payment must be a positive number"), 400
 
 
     _db=open_db()
 
     user_exists= _db.execute("SELECT COUNT(*) FROM users WHERE crsid = ?",
-			(crsid,)
-		).fetchone()[0]
+            (crsid,)
+        ).fetchone()[0]
 
     if user_exists == 0:
         return render_template('newpayment.html', error=f"No user found with CRSid '{crsid}'"), 400
@@ -621,9 +620,9 @@ def create_payment():
         current_app.logger.info(f"Recorded payment of {payment} pence for user {crsid}")
 
     except sqlite3.Error as e:
-       	_db.rollback()
-       	current_app.logger.error(f"Failed to record payment for {crsid}: {e}")
-       	return render_template('newpayment.html', error="Database error"), 500
+        _db.rollback()
+        current_app.logger.error(f"Failed to record payment for {crsid}: {e}")
+        return render_template('newpayment.html', error="Database error"), 500
 
 
 
